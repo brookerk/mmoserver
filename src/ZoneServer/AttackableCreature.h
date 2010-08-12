@@ -74,21 +74,27 @@ class AttackableCreature : public NPCObject
 	public:
 		AttackableCreature(uint64 templateId);
 		virtual ~AttackableCreature();
-		virtual void prepareCustomRadialMenu(CreatureObject* creatureObject, uint8 itemCount);
-		virtual void handleObjectMenuSelect(uint8 messageType,Object* srcObject);
+
+		virtual void			prepareCustomRadialMenu(CreatureObject* creatureObject, uint8 itemCount);
+		virtual void			handleObjectMenuSelect(uint8 messageType,Object* srcObject);
 		// void setDeathEffect(uint32 effectId) {mDeathEffectId = effectId;}
 
-		virtual void	addKnownObject(Object* object);
+		virtual void			addKnownObject(Object* object);
 
-		virtual void	handleEvents(void);
-		virtual uint64	handleState(uint64 timeOverdue);
-		virtual void	inPeace(void);
-		virtual void	killEvent(void);
-		virtual void	respawn(void);
-		virtual float	getMaxSpawnDistance(void);
+		virtual void			handleEvents(void);
+		virtual uint64			handleState(uint64 timeOverdue);
+		virtual void			inPeace(void);
+		virtual void			killEvent(void);
+		
+		//spawn us in the first place
+		virtual void			respawn(void);
+		
+		//unspawn us
+		virtual void			unSpawn(void);
+		virtual float			getMaxSpawnDistance(void);
 
-		void	assistCreature(uint64 targetId);
-		void	assistLair(uint64 targetId);
+		void					assistCreature(uint64 targetId);
+		void					assistLair(uint64 targetId);
 
 		// void					haltAllActions(void) {mCombatState = State_Halted;}
 
@@ -173,7 +179,7 @@ class AttackableCreature : public NPCObject
 		// void	updateAttackersXp(void);
 		void	setLairId(uint64 lairId) {mLairId = lairId;}
 
-
+		void	setPointSpawn(bool mmh){mPointSpawn = mmh;}
 	private:
 		// Default constructor, should not be used.
 		AttackableCreature();
@@ -220,7 +226,6 @@ class AttackableCreature : public NPCObject
 		void	SetReadyDelay(int64 readyDelay) {mReadyDelay = readyDelay;}
 		int32	getRoamingSteps(void) const {return mRoamingSteps;}
 		void	setRoamingSteps(int32 roamingSteps) {mRoamingSteps = roamingSteps;}
-
 
 		// int32	getWeaponXp(void) const {return mWeaponXp;}
 		bool	isAttackTauntSent(void) const;
@@ -346,6 +351,8 @@ private:
 		uint64	mAssistanceNeededWithId;
 		uint64	mAssistedTargetId;
 		uint64	mLairNeedAssistanceWithId;
+
+		bool		mPointSpawn;
 		bool		mAttackTauntSent;
 		bool		mAttackedTauntSent;
 		bool		mHoming;

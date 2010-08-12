@@ -30,6 +30,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "CombatManager.h"
 #include "CreatureObject.h"
 #include "PlayerObject.h"
+#include "SpawnManager.h"
 #include "Weapon.h"
 #include "WorldConfig.h"
 #include "WorldManager.h"
@@ -90,7 +91,7 @@ NpcManager::NpcManager()
 NpcManager::NpcManager(Database* database) :mDatabase(database)
 {
 	// _setupDatabindings();
-	this->loadLairs();
+	//this->loadLairs();
 }
 
 
@@ -127,7 +128,7 @@ void NpcManager::addCreature(uint64 creatureId, const SpawnData *spawn)
 	// Activate npc.
 	// gWorldManager->addReadyNpc(creatureId, spawn->mBasic.timeToFirstSpawn);
 
-	gWorldManager->addDormantNpc(creatureId, spawn->mBasic.timeToFirstSpawn);
+	gSpawnManager->addDormantNpc(creatureId, spawn->mBasic.timeToFirstSpawn);
 }
 */
 
@@ -152,18 +153,18 @@ uint64 NpcManager::handleNpc(NPCObject* npc, uint64 timeOverdue)
 	NPCObject::Npc_AI_State newState = npc->getAiState();
 	if (newState != oldState)
 	{
-		waitTime = 0;
+		waitTime = 0;//waittime = 0 deletes the npc out of the old list
 		if (newState == AttackableCreature::NpcIsDormant)
 		{
-			gWorldManager->addDormantNpc(npc->getId(), newWaitTime);
+			gSpawnManager->addDormantNpc(npc->getId(), newWaitTime);
 		}
 		else if (newState == AttackableCreature::NpcIsReady)
 		{
-			gWorldManager->addReadyNpc(npc->getId(), newWaitTime);
+			gSpawnManager->addReadyNpc(npc->getId(), newWaitTime);
 		}
 		else if (newState == AttackableCreature::NpcIsActive)
 		{
-			gWorldManager->addActiveNpc(npc->getId(), newWaitTime);
+			gSpawnManager->addActiveNpc(npc->getId(), newWaitTime);
 		}
 		else
 		{
@@ -199,7 +200,7 @@ void NpcManager::handleObjectReady(Object* object)
 // This part is where the natural lairs are loaded from DB.
 //
 //=============================================================================================================================
-void NpcManager::loadLairs(void)
+/*void NpcManager::loadLairs(void)
 {
 	//load lair and creature spawn, and optionally heightmaps cache.
 	// NpcFamily_NaturalLairs
@@ -209,6 +210,18 @@ void NpcManager::loadLairs(void)
 								"FROM lairs "
 								"INNER JOIN spawns ON (lairs.creature_spawn_region = spawns.id) "
 								"WHERE spawns.spawn_planet=%u AND lairs.family=%u ORDER BY lairs.id;",gWorldManager->getZoneId(), NpcFamily_NaturalLairs);
+}
+*/
+
+void NpcManager::spawnLairs(uint32 lairId, uint64 spawnregion, glm::vec3 spawnPoint)
+{
+	uint64 npcNewId = gWorldManager->getRandomNpNpcIdSequence();
+
+	if (npcNewId != 0)
+	{
+		NonPersistentNpcFactory* nonPersistentNpcFactory = NonPersistentNpcFactory::Instance();
+		nonPersistentNpcFactory->requestLairObject(this, lairId, npcNewId,spawnregion, spawnPoint);
+	}
 }
 
 void NpcManager::handleDatabaseJobComplete(void* ref, DatabaseResult* result)
@@ -238,12 +251,11 @@ void NpcManager::handleDatabaseJobComplete(void* ref, DatabaseResult* result)
 
 				for (uint64 lairs = 0; lairs < lair.mNumberOfLairs; lairs++)
 				{
-					// We need two id's in sequence, since nps'c have an inventory.
 					uint64 npcNewId = gWorldManager->getRandomNpNpcIdSequence();
 
 					if (npcNewId != 0)
 					{
-						nonPersistentNpcFactory->requestLairObject(this, lair.mLairsId, npcNewId);
+						//nonPersistentNpcFactory->requestLairObject(this, lair.mLairsId, npcNewId,0);
 					}
 				}
 			}

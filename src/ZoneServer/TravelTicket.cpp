@@ -16,12 +16,12 @@ version 2.1 of the License, or (at your option) any later version.
 
 This library is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 Lesser General Public License for more details.
 
 You should have received a copy of the GNU Lesser General Public
 License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 ---------------------------------------------------------------------------------------
 */
 
@@ -42,7 +42,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 TravelTicket::TravelTicket() : Item()
 {
-	
+
 }
 
 void TravelTicket::prepareCustomRadialMenu(CreatureObject* creatureObject, uint8 itemCount)
@@ -64,14 +64,14 @@ TravelTicket::~TravelTicket()
 
 BString TravelTicket::getBazaarName()
 {
-	int8	ticketStr[256];
+	int8 ticketStr[256];
 
 	sprintf(ticketStr,"Travel Ticket %s : %s"
 		,((getAttribute<std::string>("travel_departure_planet")).c_str())
 		,((getAttribute<std::string>("travel_arrival_planet")).c_str()));
 
 	BString value = ticketStr;
-	
+
 	return value;
 }
 
@@ -81,11 +81,11 @@ void TravelTicket::handleObjectMenuSelect(uint8 messageType,Object* srcObject)
 {
 	if(messageType == radId_itemUse)
 	{
-		PlayerObject*	player	= dynamic_cast<PlayerObject*>(srcObject);
+		PlayerObject* player = dynamic_cast<PlayerObject*>(srcObject);
 
 		if(player->getPosture() == CreaturePosture_SkillAnimating)
 		{
-            gMessageLib->SendSystemMessage(::common::OutOfBand("error_message", "wrong_state"), player);
+			gMessageLib->SendSystemMessage(::common::OutOfBand("error_message", "wrong_state"), player);
 			return;
 		}
 
@@ -102,18 +102,17 @@ void TravelTicket::handleObjectMenuSelect(uint8 messageType,Object* srcObject)
 			{
 				if(player->getParentId() == shuttle->getParentId())
 				{
-					gTravelMapHandler->useTicket(player, (TravelTicket*) this,shuttle); 
+					gTravelMapHandler->useTicket(player, (TravelTicket*) this,shuttle);
 					return;
 				}
 			}
 
 			++objIt;
 		}
-	
+
 		gMessageLib->SendSystemMessage(L"There is no shuttle nearby", player);
 	}
 }
 
 //=============================================================================
-
 

@@ -38,6 +38,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "UIManager.h"
 #include "VehicleController.h"
 #include "WorldManager.h"
+#include "SpawnManager.h"
 #include "WorldConfig.h"
 #include "ZoneTree.h"
 #include "ZoneServer/Tutorial.h"
@@ -927,7 +928,7 @@ void CreatureObject::die()
 		}
 
 		// Put this creature in the pool of delayed destruction.
-		gWorldManager->addCreatureObjectForTimedDeletion(this->getId(), timeBeforeDeletion);
+		gSpawnManager->addCreatureObjectForTimedDeletion(this->getId(), timeBeforeDeletion);
 		// this->killEvent();
 	}
 }

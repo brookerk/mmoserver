@@ -131,7 +131,7 @@ end;
 
 LuaScriptEngine.WaitMSec(6000);
 
-local wompratTypeId = 101;
+local wompratTypeId = 1;
 local npcWompRat;
 local npcWompRatId;
 local wompRatCellId = 0;
@@ -209,7 +209,7 @@ wompRatSpawnPosZ = -3678;
 npcWompRat, npcWompRatId = createAndReSpawnNpc(wompratTypeId, "", "", wompRatCellId, wompRatRespawnPeriod, wompRatSpawnDirY, wompRatSpawnDirW, wompRatSpawnPosX, wompRatSpawnPosY, wompRatSpawnPosZ);
 -- LuaScriptEngine.WaitMSec(1000);
 
-local creatureTemplateId = 106;		-- a rill
+local creatureTemplateId = 6;		-- a rill
 local creatureObject;
 local creatureId;
 local creatureCellId = 0;

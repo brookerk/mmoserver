@@ -173,7 +173,7 @@ void NonPersistantObjectFactory::createTangible(ObjectFactoryCallback* ofCallbac
 	//asyncContainer->mOfCallback->handleObjectReady(item,asyncContainer->mClient);
 }
 
-/////////////////////////////////////////////////////////////////////////////////
+//=======================================================================================================================
 //we create a camp at the given coordinates together with all the necessary additions as found in structure_item_template
 //
 

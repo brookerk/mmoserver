@@ -99,22 +99,15 @@ typedef std::vector<RegionObject*>				ActiveRegions;
 typedef std::list<CreatureObject*>				CreatureQueue;
 typedef std::vector<std::pair<uint64, NpcConversionTime*> >	NpcConversionTimers;
 typedef std::map<uint64, uint64>				PlayerMovementUpdateMap;
-typedef std::map<uint64, uint64>				CreatureObjectDeletionMap;
 typedef std::map<uint64, uint64>				PlayerObjectReviveMap;
 
 // a list of busy craft tools needing regular updates
 typedef std::vector<uint64>						CraftTools;
 
-// Creature spawn regions.
-typedef std::map<uint64, const CreatureSpawnRegion*>	CreatureSpawnRegionMap;
-
 // Containers with handlers to Npc-objects handled by the NpcManager (or what we are going to call it its final version).
 // The active container will be the most often checked, and the Dormant the less checked container.
 
 // And yes. Handlers... handlers... no object refs that will be invalid all the time.
-typedef std::map<uint64, uint64>				NpcDormantHandlers;
-typedef std::map<uint64, uint64>				NpcReadyHandlers;
-typedef std::map<uint64, uint64>				NpcActiveHandlers;
 typedef std::map<uint64, uint64>				AdminRequestHandlers;
 
 // AttributeKey map
@@ -257,9 +250,6 @@ class WorldManager : public ObjectFactoryCallback, public DatabaseCallback, publ
 		// removes player from the timeout list and adds him to the world
 		void					addReconnectedPlayer(PlayerObject* playerObject);
 
-		// adds dead creature object to the pool of objects with delayed destruction.
-		void					addCreatureObjectForTimedDeletion(uint64 creatureId, uint64 when);
-
 		// adds dead object to the pool of objects to be send to nearest cloning facility.
 		void					addPlayerObjectForTimedCloning(uint64 playerId, uint64 when);
 
@@ -290,22 +280,8 @@ class WorldManager : public ObjectFactoryCallback, public DatabaseCallback, publ
 		bool					objectsInRange(uint64 obj1Id, uint64 obj2Id, float range);
 		bool					objectsInRange(const glm::vec3& obj1Position, uint64 obj1ParentId, uint64 obj2Id, float range);
 
-		// Add-remove npc from Npc-handler queue's.
-		void					addDormantNpc(uint64 creature, uint64 when);
-		void					removeDormantNpc(uint64 creature);
-		void					forceHandlingOfDormantNpc(uint64 creature);
-
-		void					addReadyNpc(uint64 creature, uint64 when);
-		void					removeReadyNpc(uint64 creature);
-		void					forceHandlingOfReadyNpc(uint64 creature);
-
-		void					addActiveNpc(uint64 creature, uint64 when);
-		void					removeActiveNpc(uint64 creature);
-
 		void					addAdminRequest(uint64 requestId, uint64 when);
 		void					cancelAdminRequest(int32 requestId);
-
-		const					Anh_Math::Rectangle getSpawnArea(uint64 spawnRegionId);
 
 		// retrieve object maps
 		ObjectMap*				getWorldObjectMap(){ return &mObjectMap; }
@@ -424,10 +400,6 @@ class WorldManager : public ObjectFactoryCallback, public DatabaseCallback, publ
 		bool	_handleGeneralObjectTimers(uint64 callTime, void* ref);
 		bool	_handleGroupObjectTimers(uint64 callTime, void* ref);
 
-		bool	_handleDormantNpcs(uint64 callTime, void* ref);
-		bool	_handleReadyNpcs(uint64 callTime, void* ref);
-		bool	_handleActiveNpcs(uint64 callTime, void* ref);
-
 		bool	_handleAdminRequests(uint64 callTime, void* ref);
 
 		void	_startWorldScripts();
@@ -450,11 +422,7 @@ class WorldManager : public ObjectFactoryCallback, public DatabaseCallback, publ
 		boost::pool<boost::default_user_allocator_malloc_free>	mWM_DB_AsyncPool;
 
 		AdminRequestHandlers		mAdminRequestHandlers;
-		CreatureObjectDeletionMap	mCreatureObjectDeletionMap;
-		CreatureSpawnRegionMap		mCreatureSpawnRegionMap;
-		NpcActiveHandlers			mNpcActiveHandlers;
-		NpcDormantHandlers			mNpcDormantHandlers;
-		NpcReadyHandlers			mNpcReadyHandlers;
+		
 		ObjectIDList			    mStructureList;
 		ObjectMap					mObjectMap;
 		PlayerAccMap				mPlayerAccMap;
@@ -478,17 +446,17 @@ class WorldManager : public ObjectFactoryCallback, public DatabaseCallback, publ
 		ShuttleList					mShuttleList;
 		ScriptList					mWorldScripts;
 		CreatureQueue				mObjControllersToProcess;
-		Weather									mCurrentWeather;
+		Weather						mCurrentWeather;
 		ScriptEventListener			mWorldScriptsListener;
 		Anh_Utils::Scheduler*		mAdminScheduler;
 		Anh_Utils::VariableTimeScheduler* mBuffScheduler;
-		Database*								mDatabase;
+		
+		Database*					mDatabase;
 		Anh_Utils::Scheduler*		mEntertainerScheduler;
 		Anh_Utils::Scheduler*		mScoutScheduler;
 		Anh_Utils::Scheduler*		mHamRegenScheduler;
 		Anh_Utils::Scheduler*		mStomachFillingScheduler;
 		Anh_Utils::Scheduler*		mMissionScheduler;
-		Anh_Utils::Scheduler*		mNpcManagerScheduler;
 		Anh_Utils::Scheduler*		mObjControllerScheduler;
 		Anh_Utils::Scheduler*		mPlayerScheduler;
 		ZoneTree*								mSpatialIndex;

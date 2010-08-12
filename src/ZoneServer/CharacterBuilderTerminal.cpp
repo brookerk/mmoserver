@@ -34,6 +34,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "UIManager.h"
 #include "UIResourceSelectListBox.h"
 #include "ResourceManager.h"
+#include "SpawnManager.h"
+#include "AttackableCreature.h"
+#include "NpcManager.h"
 #include "TreasuryManager.h"
 #include "TradeManager.h"
 #include "SkillManager.h"
@@ -46,6 +49,25 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "Utils/utils.h"
 
 #include "utils/rand.h"
+
+
+void CharacterBuilderTerminal::handleObjectReady(Object* object)
+{
+	CreatureObject* creature = dynamic_cast<CreatureObject*>(object);
+	if (creature)
+	{
+		
+		AttackableCreature* ac = dynamic_cast<AttackableCreature*>(object);
+		if (ac)
+		{
+			ac->setPointSpawn(true);
+			ac->respawn();
+			
+			gNpcManager->handleNpc(ac,0);
+			//ac->handleEvents();
+		}
+	}
+}
 //=============================================================================
 
 CharacterBuilderTerminal::CharacterBuilderTerminal() : Terminal(), mSortedList(NULL)
@@ -88,6 +110,7 @@ void CharacterBuilderTerminal::InitMenus()
 	mMainMenu.push_back("Manage Items");
 	mMainMenu.push_back("Manage Resources");
 	mMainMenu.push_back("Manage Professions");
+	mMainMenu.push_back("Get Creature by ID");
 	
 	mMainCsrMenu.push_back("Manage Experience");
 	mMainCsrMenu.push_back("Manage Credits");
@@ -97,6 +120,7 @@ void CharacterBuilderTerminal::InitMenus()
 	mMainCsrMenu.push_back("Get Item by ID");
 	mMainCsrMenu.push_back("Manage Professions");
 	mMainCsrMenu.push_back("Manage Wounds");
+	mMainCsrMenu.push_back("Get Creature by ID");
 
 	InitExperience();
 	InitProfessions();
@@ -105,6 +129,25 @@ void CharacterBuilderTerminal::InitMenus()
 	InitItems();
 	InitWounds();
 }
+
+
+void CharacterBuilderTerminal::npcCreate(PlayerObject* player, uint32 templateId) //, uint64 npcPrivateOwnerId, uint64 cellForSpawn, std::string firstname, std::string lastname, float dirY, float dirW, float posX, float posY, float posZ, uint64 respawnDelay)
+{
+	uint64 npcId = gWorldManager->getRandomNpNpcIdSequence();
+	if (npcId != 0)
+	{
+		// Let's create a npc.
+		NonPersistentNpcFactory::Instance()->requestCreatureObject(this, templateId, npcId, 0, player->mPosition, glm::quat(), 0);
+	}
+	else
+	{
+		// @TODO: WorldManager::getRandomNpNpcIdSequence must return a valid value.
+		//assert(false);
+	}
+	//return npcId;
+}
+
+
 void CharacterBuilderTerminal::InitProfessions()
 {
 	mProfessionMenu.push_back("Drop All Skills.");
@@ -704,6 +747,13 @@ void CharacterBuilderTerminal::_handleMainMenu(PlayerObject* playerObject, uint3
 			gUIManager->createNewListBox(this,"handleGetProf","Select Profession to Master","Select from the list below.",mProfessionMenu,playerObject,SUI_Window_CharacterBuilderProfessionMastery_ListBox);
 		}
 		break;
+	case 6: //creature
+		if(playerObject->isConnected())
+		{
+			BStringVector dropDowns;
+			gUIManager->createNewInputBox(this, "handleInputCreatureId", "Get Creature", "Enter the creatures ID", dropDowns, playerObject, SUI_IB_NODROPDOWN_OKCANCEL,SUI_Window_CharacterBuilder_ListBox_Creature,8);
+		}
+		break;
 	default:
 		break;
 	}
@@ -755,6 +805,13 @@ void CharacterBuilderTerminal::_handleMainCsrMenu(PlayerObject* playerObject, ui
 			gUIManager->createNewListBox(this,"handleWoundMenu","Wounds","Select a Wound.",mWoundMenu,playerObject,SUI_Window_CharacterBuilder_ListBox_WoundMenu);
 		}
 		break;
+	case 8: //creature
+		if(playerObject->isConnected())
+		{
+			BStringVector dropDowns;
+			gUIManager->createNewInputBox(this, "handleInputCreatureId", "Get Creature", "Enter the creatures ID", dropDowns, playerObject, SUI_IB_NODROPDOWN_OKCANCEL,SUI_Window_CharacterBuilder_ListBox_Creature,8);
+		}
+		break;
 	default:
 		break;
 	}
@@ -798,16 +855,17 @@ void CharacterBuilderTerminal::_handleProfessionMenu(PlayerObject* playerObject,
 	SkillList* skillList = gSkillManager->getMasterProfessionList();
 	SkillList::iterator newSkill = skillList->begin();
 	newSkill+=element-1;
-	if(!playerObject->getJediState() && strstr((*newSkill)->mName.getAnsi(),"discipline"))
-	{
-		gMessageLib->SendSystemMessage(L"Sorry. That profession is only available to Jedi Enabled Accounts", playerObject);
+	//if(!playerObject->getJediState() && strstr((*newSkill)->mName.getAnsi(),"discipline"))
+	//{
+	//	gMessageLib->SendSystemMessage(L"Sorry. That profession is only available to Jedi Enabled Accounts", playerObject);
 		if(playerObject->isConnected())
 		{
 			gUIManager->createNewListBox(this,"handleGetProf","Select Profession to Master","Select from the list below.",mProfessionMenu,playerObject,SUI_Window_CharacterBuilderProfessionMastery_ListBox);
 		}
-	} else {
+	//}
+//else {
 		gSkillManager->learnSkillLine((*newSkill)->mId, playerObject, false);
-	}
+	//}
 }
 void CharacterBuilderTerminal::_handleExperienceMenu(PlayerObject* playerObject, uint32 action,int32 element,BString inputStr,UIWindow* window)
 {
@@ -2360,6 +2418,19 @@ void CharacterBuilderTerminal::_handleRifleMenu(PlayerObject* player, uint32 act
 	}
 }
 
+void CharacterBuilderTerminal::_handleCSRCreatureSelect(PlayerObject* playerObject, uint32 action,int32 element,BString inputStr,UIWindow* window)
+{
+	uint32 inputId = 0;
+	
+	if(swscanf(inputStr.getUnicode16(),L"%u",&inputId) == 1)
+	{
+		npcCreate(playerObject,inputId);
+	}
+
+	BStringVector dropDowns;
+	gUIManager->createNewInputBox(this, "handleInputCreatureId", "Get Creature", "Enter the creatures ID", dropDowns, playerObject, SUI_IB_NODROPDOWN_OKCANCEL,SUI_Window_CharacterBuilder_ListBox_Creature,8);
+}
+
 void CharacterBuilderTerminal::_handleCSRItemSelect(PlayerObject* playerObject, uint32 action,int32 element,BString inputStr,UIWindow* window)
 {
 	uint32 inputId = 0;
@@ -2569,6 +2640,9 @@ void  CharacterBuilderTerminal::handleUIEvent(uint32 action,int32 element,BStrin
 			break;
 		case SUI_Window_CharacterBuilderItemIdInputBox:
 			_handleCSRItemSelect(playerObject, action, element, inputStr, window);
+			break;
+		case SUI_Window_CharacterBuilder_ListBox_Creature:
+			_handleCSRCreatureSelect(playerObject, action, element, inputStr, window);
 			break;
 		case SUI_Window_CharacterBuilderProfessionMastery_ListBox:
 			_handleProfessionMenu(playerObject, action, element, inputStr, window);

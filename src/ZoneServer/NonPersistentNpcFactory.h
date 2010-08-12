@@ -65,7 +65,8 @@ enum NonPersistentNpcQuery
 	NonPersistentNpcQuery_LairTemplate	= 5,			// Create the basic lair
 	NonPersistentNpcQuery_LairCreatureTemplates	= 6,	// Get templates for creatures that can be spawned by lair.
 	// NonPersistentNpcQuery_LairCreature = 7,				// Create creature from lair creature templates.
-	NonPersistentNpcQuery_NpcTemplate = 8				// Create Npc from npc-template.
+	NonPersistentNpcQuery_NpcTemplate		= 8,			// Create Npc from npc-template. deprecated
+	NonPersistentNpcQuery_CreatureTemplate	= 9				// Create Creature from npc-template.
 
 };
 
@@ -101,16 +102,18 @@ class NonPersistentNpcFactory : public FactoryBase
 		// void	requestObject(ObjectFactoryCallback* ofCallback,uint64 templateId, uint64 npcNewId, const LairData lairData);
 
 		// Upgraded versions
-		void			requestLairObject(ObjectFactoryCallback* ofCallback, uint64 templateId, uint64 npcNewId);
+		void			requestLairObject(ObjectFactoryCallback* ofCallback, uint64 templateId, uint64 npcNewId, uint64 spawnRegion, glm::vec3 spawnPoint, bool firstSpawn = false);
 		// void			requestNpcObject(ObjectFactoryCallback* ofCallback, uint64 creatureTemplateId, uint64 npcNewId, uint64 parentLairId);
-		void			requestNpcObject(ObjectFactoryCallback* ofCallback,
-										   uint64 creatureTemplateId,
-										   uint64 npcNewId,
-										   uint64 spawnCellId,
-										   const glm::vec3& spawnPosition,
-										   const glm::quat&	spawnDirection,
-										   uint64 respawnDelay,
-										   uint64 parentLairId = 0);
+		//requests a creatureObject from the db
+		void			requestCreatureObject(ObjectFactoryCallback* ofCallback, 
+												   uint64 creatureTemplateId, 
+												   uint64 npcNewId,
+												   uint64 spawnCellId,
+												   const glm::vec3& spawnPosition, 
+												   const glm::quat&	spawnDirection,
+												   uint64 respawnDelay,
+												   uint64 parentLairId = 0);
+
 
 
 	protected:

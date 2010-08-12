@@ -123,7 +123,7 @@ void WorldManager::handleDatabaseJobComplete(void* ref,DatabaseResult* result)
 							mDatabase->ExecuteSqlAsync(this,new(mWM_DB_AsyncPool.ordered_malloc()) WMAsyncContainer(WMQuery_WorldScripts),"SELECT priority,file FROM config_zone_scripts WHERE planet_id=%u ORDER BY id;",mZoneId);
 
 							//load creature spawn regions, and optionally heightmaps cache.
-							mDatabase->ExecuteSqlAsync(this,new(mWM_DB_AsyncPool.ordered_malloc()) WMAsyncContainer(WMQuery_CreatureSpawnRegions),"SELECT id, spawn_x, spawn_z, spawn_width, spawn_length FROM spawns WHERE spawn_planet=%u ORDER BY id;",mZoneId);
+							//mDatabase->ExecuteSqlAsync(this,new(mWM_DB_AsyncPool.ordered_malloc()) WMAsyncContainer(WMQuery_CreatureSpawnRegions),"SELECT id, spawn_x, spawn_z, spawn_width, spawn_length FROM spawns WHERE spawn_planet=%u ORDER BY id;",mZoneId);
 						}
 
 						// load harvesters
@@ -563,33 +563,6 @@ void WorldManager::handleDatabaseJobComplete(void* ref,DatabaseResult* result)
 					
 
 					mDatabase->DestroyDataBinding(spawnBinding);
-				}
-				break;
-
-				// Creature spawn regions
-				case WMQuery_CreatureSpawnRegions:
-				{
-					DataBinding*	creatureSpawnBinding = mDatabase->CreateDataBinding(5);
-					creatureSpawnBinding->addField(DFT_int64,offsetof(CreatureSpawnRegion,mId),8,0);
-					creatureSpawnBinding->addField(DFT_float,offsetof(CreatureSpawnRegion,mPosX),4,1);
-					creatureSpawnBinding->addField(DFT_float,offsetof(CreatureSpawnRegion,mPosZ),4,2);
-					creatureSpawnBinding->addField(DFT_float,offsetof(CreatureSpawnRegion,mWidth),4,3);
-					creatureSpawnBinding->addField(DFT_float,offsetof(CreatureSpawnRegion,mLength),4,4);
-
-					uint64 count = result->getRowCount();
-					
-					for(uint64 i = 0;i < count;i++)
-					{
-						CreatureSpawnRegion *creatureSpawnRegion = new CreatureSpawnRegion();
-						result->GetNextRow(creatureSpawnBinding,creatureSpawnRegion);
-						mCreatureSpawnRegionMap.insert(std::make_pair(creatureSpawnRegion->mId,creatureSpawnRegion));
-					}
-
-					if(result->getRowCount())
-						gLogger->log(LogManager::NOTICE,"Loaded creature spawn regions.");
-
-
-					mDatabase->DestroyDataBinding(creatureSpawnBinding);
 				}
 				break;
 

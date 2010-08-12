@@ -40,6 +40,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #define MaxWaveSize 6
 #define MaxCreatureTypes 5
 
+typedef std::list<uint64>				SpawnedCreatureList;
 
 typedef enum _Lair_State
 {
@@ -59,30 +60,54 @@ class LairObject :	public AttackableStaticNpc, ObjectFactoryCallback
 		LairObject(uint64 templateId);
 		virtual ~LairObject();
 
-		virtual void prepareCustomRadialMenu(CreatureObject* creatureObject, uint8 itemCount);
+		virtual void			prepareCustomRadialMenu(CreatureObject* creatureObject, uint8 itemCount);
 
-		virtual void	addKnownObject(Object* object);
+		virtual void			addKnownObject(Object* object);
 
-		virtual void	handleEvents(void);
-		virtual uint64	handleState(uint64 timeOverdue);
-		virtual void	inPeace(void);
+		virtual void			handleEvents(void);
+		virtual uint64			handleState(uint64 timeOverdue);
+		virtual void			inPeace(void);
 
-		virtual void	killEvent(void);
-		virtual void	respawn(void);
+		virtual void			killEvent(void);
+		virtual void			respawn(void);
+		virtual void			unSpawn(void);
 
-		void	spawn(void);
-		void	reportedDead(uint64 deadCreatureId);
-		bool	requestAssistance(uint64 targetId, uint64 sourceId) const;
-		void	requestLairAssistance(void) const;
+		void					spawn(void);
+		void					reportedDead(uint64 deadCreatureId);
+		bool					requestAssistance(uint64 targetId, uint64 sourceId) const;
+		void					requestLairAssistance(void) const;
 
-		void	setSpawnArea(const Anh_Math::Rectangle &mSpawnArea);
-		void	setCreatureTemplate(uint32 index, uint64 creatureTemplateId);
-		void	setCreatureSpawnRate(uint32 index, uint32 spawnRate);
-		virtual float getMaxSpawnDistance(void) {  return mMaxSpawnDistance;}
+		void					setSpawnArea(uint64 SpawnAreaId);
+		void					setCreatureTemplate(uint32 index, uint64 creatureTemplateId);
+		void					setCreatureSpawnRate(uint32 index, uint32 spawnRate);
+		virtual float			getMaxSpawnDistance(void) {  return mMaxSpawnDistance;}
 
+		//remove the creature from our wave tracker - we dont replace it
+		void					removeSpawn(uint64 creatureId);
+
+		/*		void					addSpawnedCreature(uint64 SpawnAreaId);
+
+		SpawnedCreatureList*	getSpawnedCreatureList(){return &mSpawnedCreatureList;}
+		void					addToSpawnedCreatureList(uint64 id){mSpawnedCreatureList.push_back(id);}
+		void					removeFromSpawnedCreatureList(uint64 id)
+															{	
+																SpawnedCreatureList::iterator it = mSpawnedCreatureList.begin();
+																while(it != mSpawnedCreatureList.end())
+																{
+																	if(it != mSpawnedCreatureList.end())
+																	{
+																		mSpawnedCreatureList.erase(it);
+																		return;
+																	}
+																	it++;
+																}
+															}
+
+		*/
 		uint64	mCreatureId[MaxWaveSize];
 		int32	mPassiveCreature[MaxWaveSize];
 
+		uint64	mSpawnRegion;
 	private:
 		LairObject();
 
@@ -91,27 +116,27 @@ class LairObject :	public AttackableStaticNpc, ObjectFactoryCallback
 		bool	getLairTarget(void);
 		void	makePeaceWithDefendersOutOfRange(void);
 
-		Anh_Math::Rectangle mSpawnArea;
+		Lair_State				mLairState;
 
-		Lair_State	mLairState;
+		int32					mCreatureSpawnRate[MaxCreatureTypes];
 
-		int32	mCreatureSpawnRate[MaxCreatureTypes];
-
-		int64	mInitialSpawnDelay;			// in ms
-		uint64	mCreatureTemplates[MaxCreatureTypes]; // Creature templates and spwan rate to be used by lair.
-		uint64	mLairsTypeId;
-		uint64 mSpawnCell;
+		int64					mInitialSpawnDelay;			// in ms
+		uint64					mCreatureTemplates[MaxCreatureTypes]; // Creature templates and spwan rate to be used by lair.
+		uint64					mLairsTypeId;
+		uint64					mSpawnCell;
+		
 		// This is the max stalking distance from the spawn point or other central point, like lair.
 		// Will be used when calculating spawn positions within a region. We do not allow the creatures to move outside the region.
-		float	mMaxStalkerDistance;	// Raduis from lair.
-		float	mMaxSpawnDistance;		// Max distance from lair where creature should spawn.
-		int32	mActiveWaves;
-		int32	mCreatureBabySpawnRate;		// Not uses yet.
-		int32	mPassiveWaves;
-		int32	mWaveSize;
-		bool	mInitialized;
-		bool	mSpawned;
-		bool	mSpawnPositionFixed;
+		float					mMaxStalkerDistance;	// Raduis from lair.
+		float					mMaxSpawnDistance;		// Max distance from lair where creature should spawn.
+		int32					mActiveWaves;
+		int32					mCreatureBabySpawnRate;		// Not used yet.
+		int32					mPassiveWaves;
+		int32					mWaveSize;
+		bool					mInitialized;
+		bool					mSpawned;
+		bool					mSpawnPositionFixed;
+		SpawnedCreatureList		mSpawnedCreatureList;		//here we keep tabs of our spawned creatures
 };
 
 //=============================================================================

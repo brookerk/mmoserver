@@ -31,6 +31,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "CMWeaponGroup.h"
 #include "ObjectControllerCommandMap.h"
 #include "PlayerObject.h"
+#include "SpawnManager.h"
 #include "Weapon.h"
 #include "VehicleController.h"
 #include "WorldManager.h"
@@ -295,8 +296,8 @@ bool CombatManager::_verifyCombatState(CreatureObject* attacker, uint64 defender
 			{
 				// Creature was NOT in combat before, and may very well be dormant.
 				// Wake him up.
-				gWorldManager->forceHandlingOfDormantNpc(defender->getId());
-				gWorldManager->forceHandlingOfReadyNpc(defender->getId());
+				gSpawnManager->forceHandlingOfDormantNpc(defender->getId());
+				gSpawnManager->forceHandlingOfReadyNpc(defender->getId());
 
 				// Creature may need some aggro built up before going into combat state??
 				defender->toggleStateOn((CreatureState)(CreatureState_Combat + CreatureState_CombatAttitudeNormal));

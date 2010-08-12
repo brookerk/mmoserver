@@ -71,6 +71,7 @@ NPCObject::NPCObject()
 , mLootGroupId(0)
 , mNpcTemplateId(0)
 , mRespawnDelay(0)
+, mFirstSpawn(true)
 {
 	mType = ObjType_NPC;
 	mCreoGroup = CreoGroup_PersistentNpc;

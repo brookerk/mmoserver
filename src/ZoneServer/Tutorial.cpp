@@ -985,7 +985,7 @@ bool Tutorial::isPlayerTrained(void)
 
 	if (mPlayerObject && mPlayerObject->isConnected())
 	{
-		isTrained = (mPlayerObject->getSkillPointsLeft() < 250);
+		isTrained = (mPlayerObject->getSkillPointsLeft() < 270);
 	}
 	return isTrained;
 }

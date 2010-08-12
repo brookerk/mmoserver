@@ -34,6 +34,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "ObjectControllerCommandMap.h"
 #include "ObjectFactory.h"
 #include "PlayerObject.h"
+#include "SpawnManager.h"
 #include "WorldManager.h"
 
 #include "MessageLib/MessageLib.h"
@@ -557,7 +558,7 @@ void ObjectController::lootAll(uint64 targetId, PlayerObject* playerObject)
                     gMessageLib->SendSystemMessage(::common::OutOfBand("error_message", "corpse_empty"), playerObject);
 				}
 				// Put this creaure in the pool of delayed destruction and remove the corpse from scene.
-				gWorldManager->addCreatureObjectForTimedDeletion(creatureObject->getId(), LootedCorpseTimeout);
+				gSpawnManager->addCreatureObjectForTimedDeletion(creatureObject->getId(), LootedCorpseTimeout);
 			}
 		}
 		else

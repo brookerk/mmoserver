@@ -1209,10 +1209,7 @@ void MessageLib::sendInventory(PlayerObject* playerObject)
 
 	//to stop the server from crashing.
 	if(!inventory)
-	{
-		assert(false && "MessageLib::sendInventory - Player has no inventory ???? :(");
 		return;
-	}
 
 	inventory->setTypeOptions(256);
 

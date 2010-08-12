@@ -172,7 +172,9 @@ enum ui_window_types : unsigned int
 	SUI_Window_CharacterBuilder_ListBox_WoundMenu,
 
 	//trade
-	SUI_Window_Trade_BankTip_ConfirmSurcharge
+	SUI_Window_Trade_BankTip_ConfirmSurcharge,
+
+	SUI_Window_CharacterBuilder_ListBox_Creature
 
 };
 

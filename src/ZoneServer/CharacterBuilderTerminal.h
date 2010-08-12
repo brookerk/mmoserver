@@ -29,6 +29,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #define ANH_ZONESERVER_TANGIBLE_CHARACTERBUILDERTERMINAL_H
 
 #include "Terminal.h"
+#include "NonPersistentNpcFactory.h"
 #include <vector>
 
 class PlayerObject;
@@ -52,6 +53,8 @@ public:
 	void		handleObjectMenuSelect(uint8 messageType,Object* srcObject);
 	void		handleUIEvent(uint32 action,int32 element,BString inputStr,UIWindow* window);
 
+	void		handleObjectReady(Object* object);
+
 private:
 
 	void GiveItem(PlayerObject* player, uint32 id);
@@ -68,7 +71,9 @@ private:
 	void InitWeapons();
 	void InitArmor();
 	void InitProfessions();
+	void npcCreate(PlayerObject* player, uint32 templateId) ;
 	void InitWounds();
+
 
 	void SendXPMenu(PlayerObject* player, uint32 action,int32 element,BString inputStr,UIWindow* window);
 	void SendResourcesMenu(PlayerObject* player, uint32 action,int32 element,BString inputStr,UIWindow* window);
@@ -131,6 +136,8 @@ private:
 	void _handleCSRItemSelect(PlayerObject* playerObject, uint32 action,int32 element,BString inputStr,UIWindow* window);
 	void _handleMainCsrMenu(PlayerObject* playerObject, uint32 action,int32 element,BString inputStr,UIWindow* window);
 	void _handleProfessionMenu(PlayerObject* playerObject, uint32 action,int32 element,BString inputStr,UIWindow* window);
+	void _handleCSRCreatureSelect(PlayerObject* playerObject, uint32 action,int32 element,BString inputStr,UIWindow* window);
+	
 
 	int32				mInputBoxAmount;
 	BStringVector		mMainMenu;

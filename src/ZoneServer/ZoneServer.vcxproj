@@ -56,6 +56,8 @@
       <PreprocessorDefinitions>WIN32;BOOST_HAS_STDINT_H;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;_WIN32_WINNT=0x0501;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <AdditionalIncludeDirectories>$(SolutionDir)deps;$(SolutionDir)deps\boost;$(SolutionDir)deps\glm;$(SolutionDir)deps\lua\src;$(SolutionDir)deps\noise\src;$(SolutionDir)deps\spatialindex\include;$(SolutionDir)deps\spatialindex\tools\include;$(SolutionDir)src</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -294,6 +296,7 @@
     <ClCompile Include="ShuttleFactory.cpp" />
     <ClCompile Include="Skill.cpp" />
     <ClCompile Include="SkillManager.cpp" />
+    <ClCompile Include="SpawnManager.cpp" />
     <ClCompile Include="SpawnRegion.cpp" />
     <ClCompile Include="SpawnRegionFactory.cpp" />
     <ClCompile Include="StaticObject.cpp" />
@@ -528,6 +531,7 @@
     <ClInclude Include="SkillEnums.h" />
     <ClInclude Include="SkillManager.h" />
     <ClInclude Include="SocialChatTypes.h" />
+    <ClInclude Include="SpawnManager.h" />
     <ClInclude Include="SpawnPoint.h" />
     <ClInclude Include="SpawnRegion.h" />
     <ClInclude Include="SpawnRegionFactory.h" />

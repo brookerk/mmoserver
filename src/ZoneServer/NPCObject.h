@@ -71,6 +71,8 @@ class NPCObject : public CreatureObject
 		void			setTemplateId(uint64 templateId) {mNpcTemplateId = templateId;}
 		uint64			getRespawnDelay(void) const {return mRespawnDelay;}
 		void			setRespawnDelay(uint64 respawnDelay) {mRespawnDelay = respawnDelay;}
+		void			setFirstSpawn(bool first) {mFirstSpawn = first;}
+		bool			getFirstSpawn() {return mFirstSpawn;}
 		uint64			getCellIdForSpawn(void) const {return mCellIdForSpawn;}
 		void			setCellIdForSpawn(uint64 cellIdForSpawn) {mCellIdForSpawn = cellIdForSpawn;}
         void			setSpawnPosition(const glm::vec3& spawnPosition) {mSpawnPosition = spawnPosition;}
@@ -152,23 +154,24 @@ class NPCObject : public CreatureObject
 		DamageDealers	mDamageDealers;
 		DamageDealers	mDamageByGroups;
 
-        glm::quat	mDefaultDirection;	// Default direction for npc-objects. Needed when players start turning the npc around.
-		glm::vec3	mPositionOffset;
-		glm::quat	mSpawnDirection;
-		glm::vec3	mSpawnPosition;
+        glm::quat		mDefaultDirection;	// Default direction for npc-objects. Needed when players start turning the npc around.
+		glm::vec3		mPositionOffset;
+		glm::quat		mSpawnDirection;
+		glm::vec3		mSpawnPosition;
 
 		Npc_AI_State	mAiState;
 
-		float mAttackRange; // Players that come within this range will (may) be attacked.
-		float mBaseAggro; // Default aggro, without any modifiers.
+		float			mAttackRange; // Players that come within this range will (may) be attacked.
+		float			mBaseAggro; // Default aggro, without any modifiers.
 
 		// Spawn info.
-		uint64  mCellIdForSpawn;
-		uint64	mLootAllowedById;
-		uint64	mLootGroupId;
-		uint64	mNpcTemplateId;
-		uint64 mRespawnDelay;		// Delay before the object will respawn. Period time taken from time of destruction from world (not the same as when you "die").
-		int32	mWeaponXp;
+		uint64			mCellIdForSpawn;
+		uint64			mLootAllowedById;
+		uint64			mLootGroupId;
+		uint64			mNpcTemplateId;
+		uint64			mRespawnDelay;		// Delay before the object will respawn. Period time taken from time of destruction from world (not the same as when you "die").
+		bool			mFirstSpawn ;
+		int32			mWeaponXp;
 };
 
 //=============================================================================

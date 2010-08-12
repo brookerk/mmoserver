@@ -1017,33 +1017,6 @@ void WorldManager::_loadAllObjects(uint64 parentId)
 
 bool WorldManager::_handleGeneralObjectTimers(uint64 callTime, void* ref)
 {
-	CreatureObjectDeletionMap::iterator it = mCreatureObjectDeletionMap.begin();
-	while (it != mCreatureObjectDeletionMap.end())
-	{
-		//  The timer has expired?
-		if (callTime >= ((*it).second))
-		{
-			// Is it a valid object?
-			CreatureObject* creature = dynamic_cast<CreatureObject*>(getObjectById((*it).first));
-			if (creature)
-			{
-				// Yes, handle it. We may put up a copy of this npc...
-				NpcManager::Instance()->handleExpiredCreature((*it).first);
-				this->destroyObject(creature);
-				mCreatureObjectDeletionMap.erase(it++);
-			}
-			else
-			{
-				// Remove the invalid object...from this list.
-				mCreatureObjectDeletionMap.erase(it++);
-			}
-		}
-		else
-		{
-			++it;
-		}
-	}
-
 	PlayerObjectReviveMap::iterator reviveIt = mPlayerObjectReviveMap.begin();
 	while (reviveIt != mPlayerObjectReviveMap.end())
 	{

@@ -215,7 +215,7 @@ void MovingObject::updatePositionInCell(uint64 parentId, const glm::vec3& newPos
 
 void MovingObject::updatePosition(uint64 parentId, const glm::vec3& newPosition)
 {
-
+	//gLogger->log(LogManager::DEBUG,"MovingObject::updatePosition::moved id:%I64u.",this->getId());
 	if (parentId == 0)
 	{
 		//we are to be moved (or already are) outside

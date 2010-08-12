@@ -44,6 +44,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "Heightmap.h"
 #include "MissionManager.h"
 #include "NpcManager.h"
+#include "SpawnManager.h"
 #include "NPCObject.h"
 #include "PlayerStructure.h"
 #include "ResourceCollectionManager.h"
@@ -132,7 +133,6 @@ WorldManager::WorldManager(uint32 zoneId,ZoneServer* zoneServer,Database* databa
 	//mImagedesignerScheduler	= new Anh_Utils::Scheduler();
 	mBuffScheduler			= new Anh_Utils::VariableTimeScheduler(100, 100);
 	mMissionScheduler		= new Anh_Utils::Scheduler();
-	mNpcManagerScheduler	= new Anh_Utils::Scheduler();
 	mAdminScheduler			= new Anh_Utils::Scheduler();
 
 	LoadCurrentGlobalTick();
@@ -155,8 +155,7 @@ WorldManager::WorldManager(uint32 zoneId,ZoneServer* zoneServer,Database* databa
 	TreasuryManager::Init(database);
 	ConversationManager::Init(database);
 	CraftingSessionFactory::Init(database);
-	if(zoneId != 41)
-		MissionManager::Init(database,mZoneId);
+	MissionManager::Init(database,mZoneId);
 
 	// register world script hooks
 	_registerScriptHooks();
@@ -216,7 +215,7 @@ void WorldManager::Shutdown()
 
 	// timers
 	delete(mAdminScheduler);
-	delete(mNpcManagerScheduler);
+	
 	delete(mObjControllerScheduler);
 	delete(mStomachFillingScheduler);
 	delete(mHamRegenScheduler);
@@ -241,24 +240,12 @@ void WorldManager::Shutdown()
 	// Player movement update timers.
 	mPlayerMovementUpdateMap.clear();
 
-	mCreatureObjectDeletionMap.clear();
 	mPlayerObjectReviveMap.clear();
 
-	mNpcDormantHandlers.clear();
-	mNpcReadyHandlers.clear();
-	mNpcActiveHandlers.clear();
-	mAdminRequestHandlers.clear();
-
-	// Handle creature spawn regions. These objects are not registred in the normal object map.
-	CreatureSpawnRegionMap::iterator it = mCreatureSpawnRegionMap.begin();
-	while (it != mCreatureSpawnRegionMap.end())
-	{
-		delete (*it).second;
-		mCreatureSpawnRegionMap.erase(it++);
-	}
-	mCreatureSpawnRegionMap.clear();
+	mAdminRequestHandlers.clear();	
 
 	NpcManager::deleteManager();
+	SpawnManager::deleteManager();
 
 	Heightmap::deleter();
 
@@ -349,7 +336,7 @@ void WorldManager::handleObjectReady(Object* object,DispatchClient* client)
 	}
 
 	// check if we done loading
-	if ((mState == WMState_StartUp) && (mObjectMap.size() + mQTRegionMap.size() + mCreatureSpawnRegionMap.size() >= mTotalObjectCount))
+	if ((mState == WMState_StartUp) && (mObjectMap.size() + mQTRegionMap.size() >= mTotalObjectCount))
 	{
 		_handleLoadComplete();
 	}
@@ -435,6 +422,7 @@ Object*	WorldManager::getObjectById(uint64 objId)
 void WorldManager::Process()
 {
 	_processSchedulers();
+	gSpawnManager->process();
 }
 
 //======================================================================================================================
@@ -445,13 +433,13 @@ void WorldManager::_processSchedulers()
 	mStomachFillingScheduler->process();
 	mSubsystemScheduler->process();
 	mObjControllerScheduler->process();
-	//mImagedesignerScheduler->process();
 	mPlayerScheduler->process();
 	mEntertainerScheduler->process();
 	mBuffScheduler->process();
 	mMissionScheduler->process();
-	mNpcManagerScheduler->process();
+	
 	mAdminScheduler->process();
+	
 }
 
 //======================================================================================================================
@@ -713,34 +701,7 @@ void WorldManager::removeBusyCraftTool(CraftingTool* tool)
 	}
 }
 
-//======================================================================================================================
-//
-//	Add a timed entry for deletion of dead creature objects.
-//
-void WorldManager::addCreatureObjectForTimedDeletion(uint64 creatureId, uint64 when)
-{
-	uint64 expireTime = Anh_Utils::Clock::getSingleton()->getLocalTime();
 
-	// gLogger->log(LogManager::DEBUG,"WorldManager::addCreatureObjectForTimedDeletion Adding new at %"PRIu64"", expireTime + when);
-
-	CreatureObjectDeletionMap::iterator it = mCreatureObjectDeletionMap.find(creatureId);
-	if (it != mCreatureObjectDeletionMap.end())
-	{
-		// Only remove object if new expire time is earlier than old. (else people can use "lootall" to add 10 new seconds to a corpse forever).
-		if (expireTime + when < (*it).second)
-		{
-			// gLogger->log(LogManager::DEBUG,"Removing object with id %"PRIu64"", creatureId);
-			mCreatureObjectDeletionMap.erase(it);
-		}
-		else
-		{
-			return;
-		}
-
-	}
-	// gLogger->log(LogManager::DEBUG,"Adding new object with id %"PRIu64"", creatureId);
-	mCreatureObjectDeletionMap.insert(std::make_pair(creatureId, expireTime + when));
-}
 
 
 bool WorldManager::_handleVariousUpdates(uint64 callTime, void* ref)
@@ -925,11 +886,8 @@ void WorldManager::_handleLoadComplete()
 
 	// Init NPC Manager, will load lairs from the DB.
 	(void)NpcManager::Instance();
-
-	// Initialize the queues for NPC-Manager.
-	mNpcManagerScheduler->addTask(fastdelegate::MakeDelegate(this,&WorldManager::_handleDormantNpcs),5,2500,NULL);
-	mNpcManagerScheduler->addTask(fastdelegate::MakeDelegate(this,&WorldManager::_handleReadyNpcs),5,1000,NULL);
-	mNpcManagerScheduler->addTask(fastdelegate::MakeDelegate(this,&WorldManager::_handleActiveNpcs),5,250,NULL);
+	//// Init NPC Manager, will load spawns from the DB.
+	(void)SpawnManager::Instance();
 
 	// Initialize static creature lairs.
 	mAdminScheduler->addTask(fastdelegate::MakeDelegate(this,&WorldManager::_handleAdminRequests),5,5000,NULL);
@@ -1439,28 +1397,6 @@ bool WorldManager::objectsInRange(const glm::vec3& obj1Position,  uint64 obj1Par
 	return inRange;
 }
 
-
-
-
-
-//======================================================================================================================
-//
-//	Get the spawn area for a region.
-//
-
-const Anh_Math::Rectangle WorldManager::getSpawnArea(uint64 spawnRegionId)
-{
-	Anh_Math::Rectangle spawnArea(0,0,0,0);
-
-	CreatureSpawnRegionMap::iterator it = mCreatureSpawnRegionMap.find(spawnRegionId);
-	if (it != mCreatureSpawnRegionMap.end())
-	{
-		const CreatureSpawnRegion *creatureSpawnRegion = (*it).second;
-		Anh_Math::Rectangle sa(creatureSpawnRegion->mPosX, creatureSpawnRegion->mPosZ, creatureSpawnRegion->mWidth ,creatureSpawnRegion->mLength);
-		spawnArea = sa;
-	}
-	return spawnArea;
-}
 
 //======================================================================================================================
 //

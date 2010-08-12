@@ -34,6 +34,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "ZoneServer/NonPersistentItemFactory.h"
 #include "ZoneServer/NonPersistentNpcFactory.h"
 #include "ZoneServer/NpcManager.h"
+#include "ZoneServer/NpcObject.h"
 #include "ZoneServer/PlayerObject.h"
 #include "ZoneServer/WorldConfig.h"
 #include "ZoneServer/WorldManager.h"
@@ -103,7 +104,7 @@ void ScriptSupport::handleObjectReady(Object* object)
 		// Save this object internally with it's id.
 		mObjectMap.insert(std::make_pair(object->getId(), object));
 
-		// Creatures are added to WorldManager list when they have been fully initilaized (spawned) successfully.
+		// Creatures are added to WorldManager list when they have been fully initialized (spawned) successfully.
 		// when we re-spawn them.
 		
 		if (object->getType() == ObjType_Tangible)
@@ -191,12 +192,12 @@ uint64 ScriptSupport::npcCreate(uint64 templateId) //, uint64 npcPrivateOwnerId,
 	if (npcId != 0)
 	{
 		// Let's create a npc.
-        NonPersistentNpcFactory::Instance()->requestNpcObject(this, templateId, npcId, 0, glm::vec3(), glm::quat(), 0);
+        NonPersistentNpcFactory::Instance()->requestCreatureObject(this, templateId, npcId, 0, glm::vec3(), glm::quat(), 0);
 	}
 	else
 	{
 		// @TODO: WorldManager::getRandomNpNpcIdSequence must return a valid value.
-		assert(false);
+		//assert(false);
 	}
 	return npcId;
 }
@@ -220,16 +221,20 @@ void ScriptSupport::npcSpawnPersistent(NPCObject* npc, uint64 npcId, uint64 cell
 
 void ScriptSupport::npcSpawn(NPCObject* npc, uint64 npcId, uint64 cellForSpawn, std::string firstname, std::string lastname, float dirY, float dirW, float posX, float posY, float posZ)
 {
+	//return;
 	npcSpawnGeneral(npcId, 0, cellForSpawn, firstname, lastname, dirY, dirW, posX, posY, posZ, 0);
 }
 
 void ScriptSupport::npcSpawnPrivate(NPCObject* npc, uint64 npcId, uint64 npcPrivateOwnerId, uint64 cellForSpawn, std::string firstname, std::string lastname, float dirY, float dirW, float posX, float posY, float posZ)
 {
+	//return;
 	npcSpawnGeneral(npcId, npcPrivateOwnerId, cellForSpawn, firstname, lastname, dirY, dirW, posX, posY, posZ, 0);
 }
 
 void ScriptSupport::npcSpawnGeneral(uint64 npcId, uint64 npcPrivateOwnerId, uint64 cellForSpawn, std::string firstname, std::string lastname, float dirY, float dirW, float posX, float posY, float posZ, uint64 respawnDelay) // , uint64 templateId)
 {
+	//return;
+
     glm::quat direction;
     glm::vec3 position;
 
@@ -378,13 +383,15 @@ void ScriptSupport::npcSpawnGeneral(uint64 npcId, uint64 npcPrivateOwnerId, uint
 void ScriptSupport::npcMove(NPCObject* npc, float posX, float posY, float posZ)
 {
 	// send out position updates to known players
-    npc->updatePosition(npc->getParentId(), glm::vec3(posX, posY, posZ));
+	if(npc->getAiState() == NPCObject::NpcIsActive)
+		npc->updatePosition(npc->getParentId(), glm::vec3(posX, posY, posZ));
 }
 
 void ScriptSupport::npcMoveToZone(NPCObject* npc, uint64 zoneId, float posX, float posY, float posZ)
 {
 	// send out position updates to known players
-	npc->updatePosition(zoneId, glm::vec3(posX, posY, posZ));
+	if(npc->getAiState() == NPCObject::NpcIsActive)
+		npc->updatePosition(zoneId, glm::vec3(posX, posY, posZ));
 }
 
 
@@ -491,7 +498,8 @@ void ScriptSupport::npcFormationMoveEx(NPCObject* npc, float posX, float posY, f
 	posZ += (cos(angle) * length);
 
 	// send out position updates to known players
-    npc->updatePosition(npc->getParentId(), glm::vec3(posX, posY, posZ));
+	if(npc->getAiState() == NPCObject::NpcIsActive)
+		npc->updatePosition(npc->getParentId(), glm::vec3(posX, posY, posZ));
 }
 
 // To be used with "ScriptSupport::npcFormationDirection".
@@ -501,7 +509,8 @@ void ScriptSupport::npcFormationMove(NPCObject* npc, float posX, float posY, flo
 	// npc->mPosition = npc->getPositionOffset();
 
 	// send out position updates to known players
-    npc->updatePosition(npc->getParentId(), glm::vec3(posX, posY, posZ) + npc->getPositionOffset());
+	if(npc->getAiState() == NPCObject::NpcIsActive)
+		npc->updatePosition(npc->getParentId(), glm::vec3(posX, posY, posZ) + npc->getPositionOffset());
 }
 
 void ScriptSupport::npcClonePosition(NPCObject* npcDest, NPCObject* npcSrc)
@@ -511,7 +520,8 @@ void ScriptSupport::npcClonePosition(NPCObject* npcDest, NPCObject* npcSrc)
 	npcDest->mDirection = npcSrc->mDirection;
 
 	// send out position updates to known players
-	npcDest->updatePosition(npcDest->getParentId(), npcSrc->mPosition);
+	if(npcDest->getAiState() == NPCObject::NpcIsActive)
+		npcDest->updatePosition(npcDest->getParentId(), npcSrc->mPosition);
 }
 
 
@@ -898,10 +908,10 @@ void ScriptSupport::setPlayerPosition(uint64 playerId, uint64 cellId, float posX
 
 void ScriptSupport::lairSpawn(uint64 lairTypeId)
 {
-	uint64 npcNewId = gWorldManager->getRandomNpNpcIdSequence();
-	if (npcNewId != 0)
-	{
+	//uint64 npcNewId = gWorldManager->getRandomNpNpcIdSequence();
+	//if (npcNewId != 0)
+//	{
 		// Let's put this sucker into play again.
-		NonPersistentNpcFactory::Instance()->requestLairObject(NpcManager::Instance(), lairTypeId, npcNewId);
-	}
+		//NonPersistentNpcFactory::Instance()->requestLairObject(NpcManager::Instance(), lairTypeId, npcNewId,0);
+	//}
 }

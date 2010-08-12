@@ -35,6 +35,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "NPCObject.h"
 #include "ObjectFactoryCallback.h"
 #include "QuestGiver.h"
+#include "SpawnRegion.h"
 #include "Trainer.h"
 #include "Weapon.h"
 #include "WorldConfig.h"
@@ -82,9 +83,11 @@ class QueryNonPersistentNpcFactory
 		uint64					mTemplateId;
 		uint64					mId;
 		uint64					mSpawnCellId;
-        glm::vec3		mSpawnPosition; 
-        glm::quat	mSpawnDirection;
+		uint64					mSpawnRegionId;
+        glm::vec3				mSpawnPosition; 
+        glm::quat				mSpawnDirection;
 		uint64					mRespawnDelay;
+		bool					mFirstSpawn;
 		uint64					mParentObjectId;
 };
 
@@ -97,7 +100,7 @@ class NpcLairEntityEx
 	public:
 		NpcLairEntityEx(){}
 		
-		uint64	mCreatureSpwanRegion;
+		uint64	mCreatureSpawnRegion;
 		uint64	mTemplateId;
 		uint32	mCreatureGroup;
 		uint32	mNumberOfLairs;
@@ -187,23 +190,19 @@ void NonPersistentNpcFactory::handleDatabaseJobComplete(void* ref,DatabaseResult
 		case NonPersistentNpcQuery_LairTemplate:
 		{
 			NpcLairEntityEx lair;
+			
 
-			DataBinding* lairSpawnBinding = mDatabase->CreateDataBinding(9);
-			lairSpawnBinding->addField(DFT_uint64,offsetof(NpcLairEntityEx,mCreatureSpwanRegion),8,0);
+			DataBinding* lairSpawnBinding = mDatabase->CreateDataBinding(4);
+			lairSpawnBinding->addField(DFT_uint64,offsetof(NpcLairEntityEx,mCreatureSpawnRegion),8,0);
 			lairSpawnBinding->addField(DFT_uint64,offsetof(NpcLairEntityEx,mTemplateId),8,1);
 			lairSpawnBinding->addField(DFT_uint32,offsetof(NpcLairEntityEx,mCreatureGroup),4,2);
-			lairSpawnBinding->addField(DFT_uint32,offsetof(NpcLairEntityEx,mNumberOfLairs),4,3);
-			lairSpawnBinding->addField(DFT_float,offsetof(NpcLairEntityEx,mSpawnPosX),4,4);
-			lairSpawnBinding->addField(DFT_float,offsetof(NpcLairEntityEx,mSpawnPosZ),4,5);
-			lairSpawnBinding->addField(DFT_float,offsetof(NpcLairEntityEx,mSpawnDirY),4,6);
-			lairSpawnBinding->addField(DFT_float,offsetof(NpcLairEntityEx,mSpawnDirW),4,7);
-			lairSpawnBinding->addField(DFT_uint32,offsetof(NpcLairEntityEx,mFamily),4,8);
+			lairSpawnBinding->addField(DFT_uint32,offsetof(NpcLairEntityEx,mFamily),4,3);
 			
 			DataBinding* lairSpawnNpcBinding = mDatabase->CreateDataBinding(4);
-			lairSpawnNpcBinding->addField(DFT_bstring,offsetof(NPCObject,mModel),255,9);
-			lairSpawnNpcBinding->addField(DFT_bstring,offsetof(NPCObject,mSpecies),255,10);
-			lairSpawnNpcBinding->addField(DFT_bstring,offsetof(NPCObject,mSpeciesGroup),255,11);
-			lairSpawnNpcBinding->addField(DFT_bstring,offsetof(NPCObject,mFaction),32,12);
+			lairSpawnNpcBinding->addField(DFT_bstring,offsetof(NPCObject,mModel),255,4);
+			lairSpawnNpcBinding->addField(DFT_bstring,offsetof(NPCObject,mSpecies),255,5);
+			lairSpawnNpcBinding->addField(DFT_bstring,offsetof(NPCObject,mSpeciesGroup),255,6);
+			lairSpawnNpcBinding->addField(DFT_bstring,offsetof(NPCObject,mFaction),32,7);
 					
 			uint64 count = result->getRowCount();
 
@@ -221,8 +220,7 @@ void NonPersistentNpcFactory::handleDatabaseJobComplete(void* ref,DatabaseResult
 			gWorldManager->addObject(npc, true);
 
 			// May need the height also, in case of pre set (fixed) spawn position.
-			npc->mPosition.x = lair.mSpawnPosX;
-			npc->mPosition.z = lair.mSpawnPosZ;
+			npc->mPosition = asyncContainer->mSpawnPosition;
 
 			if (npc->getParentId() == 0)
 			{
@@ -237,14 +235,19 @@ void NonPersistentNpcFactory::handleDatabaseJobComplete(void* ref,DatabaseResult
 				npc->mPosition.y = 0;
 			}
 			
+			
 			npc->mDirection.y = lair.mSpawnDirY;
 			npc->mDirection.w = lair.mSpawnDirW;
 
 			// Let's get the spawn area.
-			const Anh_Math::Rectangle spawnArea = gWorldManager->getSpawnArea(lair.mCreatureSpwanRegion);
+			SpawnRegion* spawnRegion = dynamic_cast<SpawnRegion*>(gWorldManager->getObjectById(asyncContainer->mSpawnRegionId));
 
-			// lair.mCreatureSpwanRegion
-			npc->setSpawnArea(spawnArea); 
+			npc->mSpawnRegion = 0;
+			if(spawnRegion)
+			{
+				spawnRegion->addLair(npc);
+				npc->mSpawnRegion = spawnRegion->getId(); 
+			}
 
 			result->ResetRowIndex();
 			result->GetNextRow(lairSpawnNpcBinding,(void*)npc );
@@ -261,6 +264,7 @@ void NonPersistentNpcFactory::handleDatabaseJobComplete(void* ref,DatabaseResult
 			npc->mHam.calcAllModifiedHitPoints();
 
 			// inventory
+
 			npcInventory->setId(npc->mId + INVENTORY_OFFSET);
 			npcInventory->setParentId(npc->mId);
 			npcInventory->setModelString("object/tangible/inventory/shared_creature_inventory.iff");
@@ -280,7 +284,7 @@ void NonPersistentNpcFactory::handleDatabaseJobComplete(void* ref,DatabaseResult
 
 			QueryNonPersistentNpcFactory* asContainer = new QueryNonPersistentNpcFactory(asyncContainer->mOfCallback, NonPersistentNpcQuery_LairCreatureTemplates, asyncContainer->mTemplateId, asyncContainer->mId);
 			// Do not transfer object refs, use the handle, i.e. asyncContainer->mId
-			// asContainer->mObject = npc;
+			 //asContainer-> >mObject = npc;
 
 			mDatabase->ExecuteSqlAsync(this, asContainer,
 							"SELECT creature_groups.creature_id "
@@ -328,6 +332,39 @@ void NonPersistentNpcFactory::handleDatabaseJobComplete(void* ref,DatabaseResult
 		}
 		break;
 
+		case NonPersistentNpcQuery_CreatureTemplate:
+		{
+			NPCObject* npc = _createNonPersistentNpc(result, asyncContainer->mTemplateId, asyncContainer->mId, asyncContainer->mParentObjectId);
+			//assert(npc);
+			if(!npc)
+			{
+				delete asyncContainer;
+				return;
+			}
+
+			// Spawn related data.
+			npc->setCellIdForSpawn(asyncContainer->mSpawnCellId);
+			npc->setSpawnPosition(asyncContainer->mSpawnPosition);
+			npc->setSpawnDirection(asyncContainer->mSpawnDirection);
+			npc->setRespawnDelay(asyncContainer->mRespawnDelay);
+			npc->setFirstSpawn(asyncContainer->mFirstSpawn);
+
+			if( npc->getLoadState() == LoadState_Loaded && asyncContainer->mOfCallback)
+			{
+				asyncContainer->mOfCallback->handleObjectReady(npc);
+			}
+			else if (npc->getLoadState() == LoadState_Attributes)
+			{
+				QueryNonPersistentNpcFactory* asContainer = new QueryNonPersistentNpcFactory(asyncContainer->mOfCallback,NonPersistentNpcQuery_Attributes, 0, npc->getId());
+
+				mDatabase->ExecuteSqlAsync(this,asContainer,"SELECT attributes.name,c.value,attributes.internal"
+					" FROM creature_attributes c"
+					" INNER JOIN attributes ON (c.attribute_id = attributes.id)"
+					" WHERE c.creature_id = %"PRIu64" ORDER BY c.order", asyncContainer->mTemplateId);
+			}
+		}
+		break;
+
 		case NonPersistentNpcQuery_NpcTemplate:
 		{
 			NPCObject* npc = _createNonPersistentNpc(result, asyncContainer->mTemplateId, asyncContainer->mId, asyncContainer->mParentObjectId);
@@ -336,6 +373,11 @@ void NonPersistentNpcFactory::handleDatabaseJobComplete(void* ref,DatabaseResult
 			if(!npc){
 				gLogger->log(LogManager::DEBUG,"NonPersistentNpcFactory::handleDatabaseJobComplete() unable to _createNonPersistentNpc, see above message.");
 				break;
+			
+			assert(npc);
+			if(!npc)
+			{
+				return;
 			}
 
 			// Spawn related data.
@@ -343,6 +385,7 @@ void NonPersistentNpcFactory::handleDatabaseJobComplete(void* ref,DatabaseResult
 			npc->setSpawnPosition(asyncContainer->mSpawnPosition);
 			npc->setSpawnDirection(asyncContainer->mSpawnDirection);
 			npc->setRespawnDelay(asyncContainer->mRespawnDelay);
+			npc->setFirstSpawn(asyncContainer->mFirstSpawn);
 
 			if( npc->getLoadState() == LoadState_Loaded && asyncContainer->mOfCallback)
 			{
@@ -357,9 +400,9 @@ void NonPersistentNpcFactory::handleDatabaseJobComplete(void* ref,DatabaseResult
 					" INNER JOIN attributes ON (non_persistent_npc_attributes.attribute_id = attributes.id)"
 					" WHERE non_persistent_npc_attributes.npc_id = %"PRIu64" ORDER BY non_persistent_npc_attributes.order", asyncContainer->mTemplateId);
 			}
-		}
+			}
 		break;
-
+			}
 		default:
 		{
 			gLogger->log(LogManager::DEBUG,"NonPersistentNpcFactory::handleDatabaseJobComplete() UNKNOWN query = %u\n", asyncContainer->mQueryType);
@@ -386,13 +429,16 @@ NPCObject* NonPersistentNpcFactory::_createNonPersistentNpc(DatabaseResult* resu
 	NpcIdentifier	npcIdentifier;
 
 	uint64 count = result->getRowCount();
+	if(!count)
+	{
+		return NULL;
+	}
 
 	result->GetNextRow(mNpcIdentifierBinding,(void*)&npcIdentifier);
 	result->ResetRowIndex();
 
 	return this->createNonPersistentNpc(result, templateId, npcNewId, npcIdentifier.mFamilyId, controllingObject);
 }
-
 
 NPCObject* NonPersistentNpcFactory::createNonPersistentNpc(DatabaseResult* result, uint64 templateId, uint64 npcNewId, uint32 familyId, uint64 controllingObject)
 {
@@ -455,12 +501,21 @@ NPCObject* NonPersistentNpcFactory::createNonPersistentNpc(DatabaseResult* resul
 	// Set the new temporarily id.
 	npc->setId(npcNewId);
 
-	// Register object with WorldManager.
+	// Register object with WorldManager. dont add to si yet!!
 	gWorldManager->addObject(npc, true);
 
+	// inventory
 	Inventory*	npcInventory = new Inventory();
 	npcInventory->setCapacity(50);//we want to be able to fill something in our inventory
 	npcInventory->setParent(npc);
+	npcInventory->setId(npc->mId + 1);
+	npcInventory->setParentId(npc->mId);
+	npcInventory->setModelString("object/tangible/inventory/shared_creature_inventory.iff");
+	npcInventory->setName("inventory");
+	npcInventory->setNameFile("item_n");
+	npcInventory->setTangibleGroup(TanGroup_Inventory);
+	npcInventory->setTangibleType(TanType_CreatureInventory);
+	npc->mEquipManager.addEquippedObject(CreatureEquipSlot_Inventory,npcInventory);
 
 	uint64 count = result->getRowCount();
 
@@ -474,17 +529,7 @@ NPCObject* NonPersistentNpcFactory::createNonPersistentNpc(DatabaseResult* resul
 	npc->mHam.mAction.setCurrentHitPoints(500);
 	npc->mHam.mMind.setCurrentHitPoints(500);
 	npc->mHam.calcAllModifiedHitPoints();
-
-	// inventory
-	npcInventory->setId(npc->mId + INVENTORY_OFFSET);
-	npcInventory->setParentId(npc->mId);
-	npcInventory->setModelString("object/tangible/inventory/shared_creature_inventory.iff");
 	
-	npcInventory->setName("inventory");
-	npcInventory->setNameFile("item_n");
-	npcInventory->setTangibleGroup(TanGroup_Inventory);
-	npcInventory->setTangibleType(TanType_CreatureInventory);
-	npc->mEquipManager.addEquippedObject(CreatureEquipSlot_Inventory,npcInventory);
 
 	if (npc->getNpcFamily() == NpcFamily_AttackableObject)
 	{
@@ -598,13 +643,12 @@ NPCObject* NonPersistentNpcFactory::createNonPersistentNpc(DatabaseResult* resul
 	}
 	npc->setLoadState(LoadState_Attributes);
 
-	// Save default direction, since player can make the npc change heading.
-	// Can't apply this to a dynamically created npc.
-	// npc->storeDefaultDirection();
 	return npc;
 }
 
 //=============================================================================
+//
+// 
 
 void NonPersistentNpcFactory::_setupDatabindings()
 {
@@ -635,24 +679,39 @@ void NonPersistentNpcFactory::_destroyDatabindings()
 
 //=============================================================================
 //
-//	Upgrade version for use of the correct DB.
+// request a lair
 //
 //=============================================================================
-void NonPersistentNpcFactory::requestLairObject(ObjectFactoryCallback* ofCallback, uint64 lairsId, uint64 npcNewId)
+void NonPersistentNpcFactory::requestLairObject(ObjectFactoryCallback* ofCallback, uint64 lairsId, uint64 npcNewId, uint64 spawnRegion, glm::vec3 spawnPoint, bool firstSpawn)
 {
-	mDatabase->ExecuteSqlAsync(this,new QueryNonPersistentNpcFactory(ofCallback, NonPersistentNpcQuery_LairTemplate, lairsId, npcNewId),
-								"SELECT lairs.creature_spawn_region, lairs.lair_template, lairs.creature_group, lairs.count, lairs.spawn_x, lairs.spawn_z, "
-								"lairs.spawn_dir_Y, lairs.spawn_dir_W, "
+	
+	QueryNonPersistentNpcFactory* asynccontainer = new QueryNonPersistentNpcFactory(ofCallback, NonPersistentNpcQuery_LairTemplate, lairsId, npcNewId);
+
+	if(spawnRegion == 0)
+	{
+		return;
+	}
+
+	asynccontainer->mSpawnRegionId = spawnRegion;
+	asynccontainer->mFirstSpawn = firstSpawn;
+	asynccontainer->mSpawnPosition = spawnPoint;
+	mDatabase->ExecuteSqlAsync(this,asynccontainer,
+								"SELECT lairs.creature_spawn_region, lairs.lair_template, lairs.creature_group, "
 								"lairs.family, lair_templates.lair_object_string, lair_templates.stf_name, lair_templates.stf_file, "
 								"faction.name "
 								"FROM lairs "
-								"INNER JOIN spawns ON (lairs.creature_spawn_region = spawns.id AND %u = spawns.spawn_planet) "
+								"INNER JOIN spawn_groups ON (lairs.creature_spawn_region = spawn_groups.id) "
+								"INNER JOIN spawns ON (spawn_groups.spawn_id = spawns.id AND %u = spawns.spawn_planet) "
 								"INNER JOIN lair_templates ON (lairs.lair_template = lair_templates.id) "
 								"INNER JOIN faction ON (lairs.faction = faction.id) "
 								"WHERE lairs.id=%u;",gWorldManager->getZoneId(), lairsId);
 }
 
-void NonPersistentNpcFactory::requestNpcObject(ObjectFactoryCallback* ofCallback, 
+//===========================================================================================================================
+//
+//request a crearure Object
+
+void NonPersistentNpcFactory::requestCreatureObject(ObjectFactoryCallback* ofCallback, 
 											   uint64 creatureTemplateId, 
 											   uint64 npcNewId,
 											   uint64 spawnCellId,
@@ -662,13 +721,12 @@ void NonPersistentNpcFactory::requestNpcObject(ObjectFactoryCallback* ofCallback
 											   uint64 parentLairId)
 {
 
-	mDatabase->ExecuteSqlAsync(this,new QueryNonPersistentNpcFactory(ofCallback, NonPersistentNpcQuery_NpcTemplate, creatureTemplateId, npcNewId, spawnCellId, spawnPosition, spawnDirection, respawnDelay, parentLairId),
-								"SELECT non_persistent_npcs.species_id, non_persistent_npcs.loot_group_id, "
-								"non_persistent_npcs.posture, non_persistent_npcs.state, non_persistent_npcs.level, "
-								"non_persistent_npcs.type, non_persistent_npcs.stf_variable_id, non_persistent_npcs.stf_file_id, "
-								"faction.name, "
-								"non_persistent_npcs.moodID, non_persistent_npcs.scale, non_persistent_npcs.family "
-								"FROM non_persistent_npcs "
-								"INNER JOIN faction ON (non_persistent_npcs.faction = faction.id) "
-								"WHERE non_persistent_npcs.id=%"PRIu64";", creatureTemplateId);
+	mDatabase->ExecuteSqlAsync(this,new QueryNonPersistentNpcFactory(ofCallback, NonPersistentNpcQuery_CreatureTemplate, creatureTemplateId, npcNewId, spawnCellId, spawnPosition, spawnDirection, respawnDelay, parentLairId),
+								"SELECT c.creature_species_id, c.loot_group_id, "
+								"c.creature_posture, c.creature_state, c.creature_level, "
+								"c.creature_type, c.stf_variable_id, c.stf_file_id, "
+								"f.name, c.creature_moodID, c.creature_scale , c.creature_family "
+								"FROM creatures c "
+								"INNER JOIN faction f ON (c.creature_faction = f.id) "
+								"WHERE c.id=%"PRIu64";", creatureTemplateId);
 }

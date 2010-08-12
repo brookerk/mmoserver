@@ -32,13 +32,17 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "MessageLib/MessageLib.h"
 #include "NpcManager.h"
 #include "PlayerObject.h"
+
 #include "QuadTree.h"
+#include "QTRegion.h"
+#include "ZoneTree.h"
+
+#include "SpawnManager.h"
 #include "ResourceContainer.h"
 #include "Weapon.h"
 #include "WorldManager.h"
 #include "ScoutManager.h"
 #include "WorldConfig.h"
-#include "ZoneTree.h"
 #include "ZoneServer/NonPersistentNpcFactory.h"
 #include "Tutorial.h"
 #include "utils/rand.h"
@@ -71,6 +75,7 @@ AttackableCreature::AttackableCreature(uint64 templateId)
 , mHoming(false)
 , mIsAssistingLair(false)
 , mWarningTauntSent(false)
+, mPointSpawn(false)
 {
 	mNpcFamily	= NpcFamily_AttackableCreatures;
 	// mNpcTemplateId = templateId;
@@ -169,10 +174,18 @@ void AttackableCreature::handleObjectMenuSelect(uint8 messageType,Object* srcObj
 									// send the creates, if we are not owned by any player OR by exactly this player.
 									if (playerObject)
 									{
-										//TODO SCH what does this mean ?? why should we know these items already ???
 										if (!object->getPrivateOwner() || (object->isOwnedBy(playerObject)))
 										{
-											gMessageLib->sendCreateTangible(tangibleObject,playerObject);
+											// could be a resource container, need to check this first, since it inherits from tangible
+											if (ResourceContainer* resCont = dynamic_cast<ResourceContainer*>(object))
+											{
+												gMessageLib->sendCreateResourceContainer(resCont,playerObject);
+											}
+											// or a tangible
+											else
+											{
+												gMessageLib->sendCreateTangible(tangibleObject,playerObject);
+											}
 										}
 									}
 								}
@@ -270,7 +283,7 @@ void AttackableCreature::handleObjectMenuSelect(uint8 messageType,Object* srcObj
 								}
 
 								// Put this creaure in the pool of delayed destruction and remove the corpse from scene.
-								gWorldManager->addCreatureObjectForTimedDeletion(this->getId(), LootedCorpseTimeout);
+								gSpawnManager->addCreatureObjectForTimedDeletion(this->getId(), LootedCorpseTimeout);
 							}
 						}
 					}
@@ -327,9 +340,10 @@ void AttackableCreature::addKnownObject(Object* object)
 	{
 		mKnownPlayers.insert(dynamic_cast<PlayerObject*>(object));
 
+		//not spawned shouldnt be in the si in the first place ...
 		if ((this->getAiState() == NpcIsDormant) && this->isAgressive() && isSpawned())	// Do not wake up the not spawned.
 		{
-			gWorldManager->forceHandlingOfDormantNpc(this->getId());
+			gSpawnManager->forceHandlingOfDormantNpc(this->getId());
 		}
 	}
 	else
@@ -804,7 +818,6 @@ void AttackableCreature::unequipWeapon(void)
 		Inventory* inventory = dynamic_cast<Inventory*>(this->getEquipManager()->getEquippedObject(CreatureEquipSlot_Inventory));
 		if (inventory)
 		{
-			inventory->addObject(weapon);
 			weapon->setParentId(inventory->getId());
 		}
 		*/
@@ -1282,7 +1295,9 @@ void AttackableCreature::handleEvents(void)
 
 uint64 AttackableCreature::handleState(uint64 timeOverdue)
 {
-	uint64 waitTime = 0;
+	//waittime = 0 deletes the npc out of its handler
+	// we do not want this
+	uint64 waitTime = 1;
 
 	switch (mCombatState)
 	{
@@ -1509,7 +1524,10 @@ void AttackableCreature::spawn(void)
 
 	// Update the world about my presence.
 
+	//gLogger->log(LogManager::CRITICAL,"AttackableCreature::spawnCreature: %"PRIu64"\n", this->getId());
+	
 	this->setSpawned();
+	
 	if (this->getParentId())
 	{
 		// insert into cell
@@ -1532,6 +1550,35 @@ void AttackableCreature::spawn(void)
 		{
 			this->setSubZoneId((uint32)region->getId());
 			region->mTree->addObject(this);
+
+			ObjectSet	objList;
+			Anh_Math::Rectangle mQueryRect = Anh_Math::Rectangle(mPosition.x - 128,mPosition.z - 128,256,256);
+			
+			region->mTree->getObjectsInRange(this,&objList,ObjType_Player,&mQueryRect);
+
+			ObjectSet::iterator objIt = objList.begin();
+
+			Object* object;
+
+			while(objIt != objList.end())
+			{
+				object = *objIt;
+
+				if(object->getParentId() == mParentId)
+				{
+					PlayerObject* player = dynamic_cast<PlayerObject*>((*objIt));
+
+					if(player)
+					{
+						gMessageLib->sendCreateCreature(this,player);
+						this->addKnownObjectSafe(player);
+					}
+				}
+				++objIt;
+			}
+
+
+
 		}
 	}
 	// Sleeping NPC's should be put in lower prio queue.
@@ -1678,7 +1725,7 @@ void AttackableCreature::setupRoaming(int32 maxRangeX, int32 maxRangeZ)
 
 		// Verify that we don't roam outside given area.
 		destination = getRandomPosition(mPosition, 2*maxRangeX, 2*maxRangeZ);
-
+		destination.y = mPosition.y;
 		uint32 sentinel = 0;
         while (glm::distance(homePosition, destination2) > getRoamingDistanceMax())
 		{
@@ -1888,9 +1935,11 @@ void AttackableCreature::killEvent(void)
 			uint64 npcNewId = gWorldManager->getRandomNpNpcIdSequence();
 			if (npcNewId != 0)
 			{
+				// TODO - report death to spawnmanager!!!!!!!!!!!!!
+				// it needs to check the area for players and decide whether we respawn
 				// Let's put this sucker into play again.
 				this->mTimeToFirstSpawn = ((uint64)gRandom->getRand() * 1000) % (this->getRespawnDelay() + 1);
-				NonPersistentNpcFactory::Instance()->requestNpcObject(NpcManager::Instance(),
+				NonPersistentNpcFactory::Instance()->requestCreatureObject(NpcManager::Instance(),
 																		this->getTemplateId(),
 																		npcNewId,
 																		this->getCellIdForSpawn(),
@@ -1900,6 +1949,14 @@ void AttackableCreature::killEvent(void)
 			}
 		}
 	}
+}
+
+//=============================================================================
+//
+// remove it from the world
+//
+void AttackableCreature::unSpawn(void)
+{
 }
 
 void AttackableCreature::respawn(void)
@@ -1949,22 +2006,34 @@ void AttackableCreature::respawn(void)
 
 	// This will give a random spawn delay from 0 up to max delay.
 	mTimeToFirstSpawn = (((uint64)gRandom->getRand() * 1000) % (uint32)(this->getRespawnDelay() + 1));
+	if(this->getFirstSpawn())
+	{
+		mTimeToFirstSpawn = (((uint64)gRandom->getRand() * 3) ) % 1;
+		//mInitialSpawnDelay = 0;
+		this->setFirstSpawn(false);
+	}
 
 	// Let us get the spawn point. It's 0 - maxSpawnDistance (2D) meters from the lair.
-	float maxSpawnDistance = parent->getMaxSpawnDistance();
-	if (maxSpawnDistance != 0.0)
+	if(!mPointSpawn)
 	{
-		position.x = (position.x - maxSpawnDistance) + (float)(gRandom->getRand() % (int32)(maxSpawnDistance + maxSpawnDistance));
-		position.z = (position.z - maxSpawnDistance) + (float)(gRandom->getRand() % (int32)(maxSpawnDistance + maxSpawnDistance));
+		float maxSpawnDistance = parent->getMaxSpawnDistance();
+		if (maxSpawnDistance != 0.0)
+		{
+			position.x = (position.x - maxSpawnDistance) + (float)(gRandom->getRand() % (int32)(maxSpawnDistance + maxSpawnDistance));
+			position.z = (position.z - maxSpawnDistance) + (float)(gRandom->getRand() % (int32)(maxSpawnDistance + maxSpawnDistance));
 
-		// Give them a random dir.
-		this->setRandomDirection();
+			// Give them a random dir.
+			this->setRandomDirection();
+		}
+		else
+		{
+			// Use the supplied direction?
+			this->mDirection = getSpawnDirection();
+		}
 	}
 	else
-	{
-		// Use the supplied direction?
-		this->mDirection = getSpawnDirection();
-	}
+		this->setRandomDirection();
+
 	if (this->getParentId() == 0)
 	{
 		// Heightmap only works outside.
@@ -2410,7 +2479,7 @@ void AttackableCreature::respawn(void)
 	// Put this sucker in the Dormant queue.
 	this->clearSpawned();
 
-	gWorldManager->addDormantNpc(this->getId(), mTimeToFirstSpawn);
+	gSpawnManager->addDormantNpc(this->getId(), mTimeToFirstSpawn);
 }
 
 //=============================================================================

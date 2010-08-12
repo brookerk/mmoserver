@@ -29,16 +29,35 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #define ANH_ZONESERVER_SPAWNREGION_H
 
 #include "RegionObject.h"
+#include "SpawnManager.h"
 #include "MathLib/Rectangle.h"
 #include "Utils/typedefs.h"
 
 //=============================================================================
 
 class ZoneTree;
+class LairObject;
 class PlayerObject;
 class QTRegion;
 
+typedef std::list<LairObject*>				LairObjectList;
+
 //=============================================================================
+
+enum ESpawnStatus
+{
+	ESpawnStatus_Unspawned		= 1,
+	ESpawnStatus_Spawned		= 2,
+	ESpawnStatus_AwaitDespawn	= 3
+
+};
+
+typedef enum Npc_AI_State
+{
+	NpcIsDormant = 0,
+	NpcIsReady,
+	NpcIsActive
+};
 
 class SpawnRegion : public RegionObject
 {
@@ -50,14 +69,26 @@ class SpawnRegion : public RegionObject
 		SpawnRegion();
 		virtual ~SpawnRegion();
 
-		uint32			getSpawnType(){ return mSpawnType; }
-		void			setSpawnType(uint32 type){ mSpawnType = type; }
-		bool			isMission(){return (mMission != 0);}
+		uint32				getSpawnType(){ return mSpawnType; }
+		void				setSpawnType(uint32 type){ mSpawnType = type; }
+		bool				isMission(){return (mMission != 0);}
 
-		virtual void	update();
-		virtual void	onObjectEnter(Object* object);
-		virtual void	onObjectLeave(Object* object);
+		void				addLair(LairObject* lair){mLairObjectList.push_back(lair);};
 
+		virtual void		update();
+		virtual void		onObjectEnter(Object* object);
+		virtual void		onObjectLeave(Object* object);
+
+		void				spawnArea();
+		void				populateArea();
+		void				despawnArea();
+		glm::vec3			getSpawnLocation();
+		bool				checkSpawnLocation(glm::vec3 location);
+		bool				checkSpawnDensity(glm::vec3 location);
+		void				setSpawnData(SpawnDataStruct*	spawnData);
+		uint32				getSpawnDensity(){return mDensity;}
+
+		
 	protected:
 
 		Anh_Math::Rectangle mQueryRect;
@@ -65,6 +96,15 @@ class SpawnRegion : public RegionObject
 		ZoneTree*			mSI;
 		uint32				mMission;
 		uint32				mSpawnType;
+
+		uint32				mDensity;
+
+		uint64				mInactivityTimer;
+
+		LairObjectList		mLairObjectList;
+		SpawnDataStruct*	mSpawnData;
+
+		ESpawnStatus		mSpawnStatus;
 };
 
 

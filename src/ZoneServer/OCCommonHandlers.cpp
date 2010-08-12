@@ -48,6 +48,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "ResourceContainer.h"
 #include "ResourceManager.h"
 #include "Shuttle.h"
+#include "SpawnManager.h"
 #include "SurveyTool.h"
 #include "BuildingObject.h"
 #include "TravelMapHandler.h"
@@ -55,7 +56,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "TreasuryManager.h"
 #include "Tutorial.h"
 #include "UIManager.h"
-//#include "Wearable.h"
 #include "WorldConfig.h"
 #include "WorldManager.h"
 #include "ZoneOpcodes.h"
@@ -725,7 +725,7 @@ bool ObjectController::removeFromContainer(uint64 targetContainerId, uint64 targ
 		return playerObject->getEquipManager()->unEquipItem(itemObject);	
 	}
 	else
-	//its OUR(!) inventory
+	//its our inventory
 	if (tangible->getParentId() == inventory->getId())
 	{
 		//gMessageLib->sendDestroyObject(targetId,playerObject);
@@ -782,7 +782,7 @@ bool ObjectController::removeFromContainer(uint64 targetContainerId, uint64 targ
 		if (invObjList->size() == 0)
 		{
 			// Put this creature in the pool of delayed destruction and remove the corpse from scene.
-			gWorldManager->addCreatureObjectForTimedDeletion(creatureInventory->getParentId(), LootedCorpseTimeout);
+			gSpawnManager->addCreatureObjectForTimedDeletion(creatureInventory->getParentId(), LootedCorpseTimeout);
 		}
 		
 		if (gWorldConfig->isTutorial())
