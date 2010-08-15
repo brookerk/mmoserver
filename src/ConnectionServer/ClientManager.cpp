@@ -244,15 +244,18 @@ void ClientManager::handleDatabaseJobComplete(void* ref, DatabaseResult* result)
 			struct charsCurrentAllowed {
 				uint32  currentChars;
 				uint32	charsAllowed;
+				uint32	unlimitedChars;
 			} charsStruct;
 
-			DataBinding* binding = mDatabase->CreateDataBinding(2);
+			DataBinding* binding = mDatabase->CreateDataBinding(3);
 			binding->addField(DFT_int32,offsetof(charsCurrentAllowed, currentChars), 4, 0);
 			binding->addField(DFT_int32,offsetof(charsCurrentAllowed, charsAllowed), 4, 1);
+			binding->addField(DFT_int32,offsetof(charsCurrentAllowed, unlimitedChars), 4, 2);
 			
 			result->GetNextRow(binding,&charsStruct);
 			client->setCharsAllowed(charsStruct.charsAllowed);
 			client->setCurrentChars(charsStruct.currentChars);
+			client->setUnlimitedChars(charsStruct.unlimitedChars);
 			
 			client->setState(CCSTATE_QueryAuth);
 			mDatabase->DestroyDataBinding(binding);
@@ -434,15 +437,15 @@ void ClientManager::_handleQueryAuth(ConnectionClient* client, DatabaseResult* r
     gMessageFactory->addUint8(1);             // Galaxy Available
 
 	// Checks the Clients Characters allowed against how many they have and sends the flag accordingly for char creation Also checks Unlimited Char Creation
-	if (client->getCharsAllowed() > client->getCurrentChars() && client->getCharsAllowed() != 0){
+	if (client->getCharsAllowed() > client->getCurrentChars() && client->getUnlimitedChars() != 1){
 		gMessageFactory->addUint8(1);             // Character creation allowed
 		gMessageFactory->addUint8(0);             // Unlimited Character Creation Flag DISABLED
 	}
-	else if(client->getCharsAllowed() < client->getCurrentChars() && client->getCharsAllowed() != 0){
+	else if(client->getCharsAllowed() < client->getCurrentChars() && client->getUnlimitedChars() != 1){
 		gMessageFactory->addUint8(0);             // Character creation disabled
 		gMessageFactory->addUint8(0);             // Unlimited Character Creation Flag DISABLED
 	}
-	else if(client->getCharsAllowed() == 0){
+	else if(client->getUnlimitedChars() == 1){
 		gMessageFactory->addUint8(1);             // Character creation allowed
 		gMessageFactory->addUint8(1);             // Unlimited Character Creation Flag DISABLED
 	}
@@ -465,9 +468,9 @@ void ClientManager::_handleQueryAuth(ConnectionClient* client, DatabaseResult* r
 void ClientManager::_processAllowedChars(DatabaseCallback* callback,ConnectionClient* client)
 {
 	client->setState(CCSTATE_AllowedChars);
+	//Characters Allowed Query
 	gLogger->log(LogManager::DEBUG, "SQL :: %s", "SELECT COUNT(characters.id) AS current_characters, characters_allowed FROM account INNER JOIN characters ON characters.account_id = account.account_id where account.account_id = '%u',client->getAccountId());"); // SQL Debug Log
-
-	mDatabase->ExecuteSqlAsync(this, client,"SELECT COUNT(characters.id) AS current_characters, characters_allowed FROM account INNER JOIN characters ON characters.account_id = account.account_id where characters.archived = '0' AND account.account_id = '%u'",client->getAccountId());
+	mDatabase->ExecuteSqlAsync(this, client,"SELECT COUNT(characters.id) AS current_characters, characters_Allowed, unlimited_Characters FROM galaxy INNER JOIN characters ON characters.account_id = account.account_id where characters.archived = '0' AND account.account_id = '%u'",client->getAccountId());
 
 	gLogger->log(LogManager::DEBUG, "SQL :: %s", "SELECT * FROM account WHERE account_id=%u AND authenticated=1 AND loggedin=0; , client->getAccountId());"); // SQL Debug Log
 	mDatabase->ExecuteSqlAsync(this,client, "SELECT * FROM account WHERE account_id=%u AND authenticated=1 AND loggedin=0;", client->getAccountId());

@@ -55,18 +55,21 @@ class ConnectionClient : public NetworkClient
 		uint32                        getServerId(void)                         { return mServerId; }
 		uint32						  getCharsAllowed(void)						{ return mCharsAllowed;}
 		uint32						  getCurrentChars(void)						{ return mCurrentChars;}
+		uint32						  getUnlimitedChars(void)						{ return mUnlimitedChars;}
 
 		void                          setState(ConnectionClientState state)     { mState = state; }
 		void                          setAccountId(uint32 id)                   { mAccountId = id; }
 		void                          setServerId(uint32 id)                    { mServerId = id; }
 		void                          setCharsAllowed(uint32 chars)				{ mCharsAllowed = chars; }
 		void                          setCurrentChars(uint32 currentChars)      { mCurrentChars = currentChars; }
+		void                          setUnlimitedChars(uint32 unlimitedChars)      { mUnlimitedChars = unlimitedChars; }
 
 	private:
 
 		ConnectionClientState	mState;
 		uint32					mCharsAllowed;
 		uint32					mCurrentChars;
+		uint32					mUnlimitedChars;
 		uint32                  mAccountId;
 		uint32                  mServerId;
 };
