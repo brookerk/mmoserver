@@ -38,6 +38,7 @@ enum ConnectionClientState
 	CCSTATE_QueryAuth,
 	CCSTATE_QueryChars,
 	CCSTATE_AllowedChars,
+	CCSTATE_CurrentChars,
 	CCState_End
 };
 
@@ -55,14 +56,14 @@ class ConnectionClient : public NetworkClient
 		uint32                        getServerId(void)                         { return mServerId; }
 		uint32						  getCharsAllowed(void)						{ return mCharsAllowed;}
 		uint32						  getCurrentChars(void)						{ return mCurrentChars;}
-		uint32						  getUnlimitedChars(void)						{ return mUnlimitedChars;}
+		uint32						  getUnlimitedChars(void)					{ return mUnlimitedChars;}
 
 		void                          setState(ConnectionClientState state)     { mState = state; }
 		void                          setAccountId(uint32 id)                   { mAccountId = id; }
 		void                          setServerId(uint32 id)                    { mServerId = id; }
-		void                          setCharsAllowed(uint32 chars)				{ mCharsAllowed = chars; }
+		void                          setCharsAllowed(uint32 allowedChars)				{ mCharsAllowed = allowedChars; }
 		void                          setCurrentChars(uint32 currentChars)      { mCurrentChars = currentChars; }
-		void                          setUnlimitedChars(uint32 unlimitedChars)      { mUnlimitedChars = unlimitedChars; }
+		void                          setUnlimitedChars(uint32 unlimitedChars)  { mUnlimitedChars = unlimitedChars; }
 
 	private:
 
